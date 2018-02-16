@@ -460,18 +460,18 @@ class DrawService {
     }
 
     createRecordTableHTML() {
-        var tableHTML = '<table><tr><th>Player</th><th>Score</th></tr>';
+        var tableHTML = '<table  class="table"><thead><tr><th>Player</th><th>Score</th></tr></thead><tbody>';
         var records = this.dao.getStoredData('playerRecordsId');
 
         for (var key in records) {
             tableHTML += '<tr><td>' + key + '</td><td>' + records[key] + '</td></tr>';
         }
-        tableHTML += '</table>';
+        tableHTML += '</tbody></table>';
         return tableHTML;
     }
 
     createReplayTableHTML(data) {
-        var tableHTML = '<table><tr><th>Player</th><th>Score</th><th>Time</th></tr>';
+        var tableHTML = '<table class="table"><thead><tr><th>Player</th><th>Score</th><th>Time</th></tr></thead><tbody>';
 
 
         for (var i = 0; i < data.length; i++) {
@@ -485,7 +485,7 @@ class DrawService {
                 '<td>' + new Date(time).toLocaleString() + '</td>' +
                 '</tr>';
         }
-        tableHTML += '</table>';
+        tableHTML += '</tbody></table>';
         return tableHTML;
 
     }
@@ -918,7 +918,7 @@ class GameArena {
     checkCurrentLevelPassed(){
         var currLvlObj = this.lvls[this.currLvl - 1];
         if (currLvlObj && this.score > currLvlObj.winScoreLimit) {
-            alert('Level ' + this.currLvl + ' is completed! Press ok to continue');
+            bootbox.alert('Level ' + this.currLvl + ' is completed! Press ok to continue');
             this.currLvl += 1;
             this.stop();
             resetStartButtonToInitialState();
@@ -977,6 +977,20 @@ class GameArena {
         resetStartButtonToInitialState();
         this.resetScore();
         gameArena = new GameArena(this.canvas, FIELD_WIDTH, FIELD_HEIGHT, Person);
+
+        /*bootbox.prompt({
+            title: "What is your name?",
+            value: "Unnamed champion",
+            callback: (playerName) => {
+                if (playerName) {
+                    this.fbDao.saveGame(this.gameCache.frames, this.score, playerName);
+                    this.lsDao.saveRecord(this.score, playerName);
+                }
+                resetStartButtonToInitialState();
+                this.resetScore();
+                gameArena = new GameArena(this.canvas, FIELD_WIDTH, FIELD_HEIGHT, Person);
+            }
+        });*/
     }
 
     replayLastGame() {
@@ -1069,9 +1083,9 @@ var routes = [
     {
         name: 'about',
         match: /[/]about/,
-        onBeforeEnter: () => {},
+        onBeforeEnter: () => {setElementAndParentStyle('aboutLink', 'active');},
         onEnter: () => console.log(`onEnter about`),
-        onLeave: () => {}
+        onLeave: () => {setElementAndParentStyle('aboutLink', '');}
     },
     {
         name: 'game',
@@ -1083,6 +1097,7 @@ var routes = [
                 resetStartButtonToInitialState();
                 makeReplayAreaPassive();
                 makeControlsAreaActive();
+                setElementAndParentStyle('gameLink', 'active');
             }
         },
         onEnter: () => {},
@@ -1097,6 +1112,7 @@ var routes = [
             // Change action icon
             var controlsArea = document.getElementById('controlsArea');
             controlsArea.children[0].src = 'img/play.png';
+            setElementAndParentStyle('gameLink', '');
             gameArena.stop();
         }
     },
@@ -1130,13 +1146,15 @@ var routes = [
         match: /[/]records/,
         onBeforeEnter: () => {
             var recordsArea = document.getElementById('recordsArea');
-            recordsArea.className = 'recordsArea active';
+            recordsArea.className = 'active';
             recordsArea.style.width = document.documentElement.clientWidth;
             recordsArea.style.height = document.documentElement.clientHeight;
 
             var tableArea = document.getElementById('recordTableId');
             tableArea.innerHTML = drawService.createRecordTableHTML();
-            tableArea.className = 'tableArea activeTable';
+            tableArea.className = 'table';
+
+            setElementAndParentStyle('recordLink', 'active');
 
         },
         onEnter: () => {},
@@ -1146,12 +1164,16 @@ var routes = [
 
             var tableArea = document.getElementById('recordTableId');
             tableArea.className = 'tableArea passive';
+
+            setElementAndParentStyle('recordLink', '');
         }
     },
     {
         name: 'replays',
         match: /[/]replays/,
         onBeforeEnter: () => {
+            setElementAndParentStyle('replayLink', 'active');
+
             var replaysPage = document.getElementById('replaysPage');
             replaysPage.className = 'replaysPage active';
             replaysPage.style.width = document.documentElement.clientWidth;
@@ -1163,12 +1185,14 @@ var routes = [
                 //console.log(element.child('content').key + ':' + element.child('content').val());
 
                 tableArea.innerHTML = drawService.createReplayTableHTML( Object.values(element.val()));
-                tableArea.className = 'tableArea activeTable';
+                tableArea.className = 'table';
             });
 
         },
         onEnter: () => console.log(`onEnter about`),
         onLeave: () => {
+            setElementAndParentStyle('replayLink', '');
+
             var recordsArea = document.getElementById('replaysPage');
             recordsArea.className = 'replaysPage passive';
 
@@ -1183,6 +1207,8 @@ var routes = [
 function prepareElements(){
 
     location.hash = '/game';
+    FIELD_HEIGHT = document.documentElement.clientHeight - document.getElementsByTagName('nav')[0].clientHeight;
+
 
     var options = {
         routes: routes
@@ -1238,6 +1264,12 @@ function makeReplayAreaPassive(){
 function makeControlsAreaActive(){
     var controlsArea = document.getElementById('controlsArea');
     controlsArea.className = '';
+}
+
+function setElementAndParentStyle(id, style){
+    var element = document.getElementById(id);
+    element.className = style;
+    element.parentElement.className = style;
 }
 
 
