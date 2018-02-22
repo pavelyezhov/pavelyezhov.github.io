@@ -1,5 +1,9 @@
+import PersonImgSettings from './PersonImgSettings';
+import GameArenaInstance from "./GameArenaInstance.js";
+
 class Person {
-    constructor(ctx, width = 30, height = 50, color = 'green', x = 900, y = 50, imgWidth = 100, imgHeight = 100, moveDirection = 'up', pictureNumber = 0) {
+    constructor(ctx, width = 30, height = 50, color = 'green', x = 900, y = 50,
+                imgWidth = 100, imgHeight = 100, moveDirection = 'up', pictureNumber = 0) {
         this.ctx = ctx;
         this.width = width;
         this.height = height;
@@ -23,10 +27,6 @@ class Person {
         return this.sprites[this.spriteNum];
     }
 
-    getBackGround(){
-        return [].slice.call(document.getElementsByTagName('img'))[3];
-    }
-
     update(ctx) {
         ctx.save();
         /*ctx.translate(this.x, this.y);
@@ -43,10 +43,6 @@ class Person {
         ctx.drawImage(this.getSprite(), personImgProperties.sx, personImgProperties.sy, personImgProperties.sWidth,
             personImgProperties.sHeight, this.imgWidth / -2, this.imgHeight / -2, this.imgWidth, this.imgHeight);
 
-        /*this.img = new Image();  // Создание нового объекта изображения
-        this.img.src = 'img/grass.png';
-        ctx.drawImage(this.img, 0, 0);*/
-
         ctx.restore();
 
         this.i += 1;
@@ -57,7 +53,7 @@ class Person {
         return this;
     }
 
-    newPos(options) {
+    newPos(options,  fieldWidth, fieldHeight) {
         this.moveAngle = 0;
         this.speed = 0;
 
@@ -73,19 +69,20 @@ class Person {
         this.x += this.deltaX;
         this.y -= this.deltaY;
 
+        GameArenaInstance.setPersonPosition({
+            xPerson: this.x,
+            yPerson: this.y
+        });
 
-        xPerson = this.x;
-        yPerson = this.y;
-
-        if (this.x > FIELD_WIDTH) {
+        if (this.x > fieldWidth) {
             this.x = 0;
         } else if (this.x < 0) {
-            this.x = FIELD_WIDTH;
+            this.x = fieldWidth;
         }
-        if (this.y > FIELD_HEIGHT) {
+        if (this.y > fieldHeight) {
             this.y = 0;
         } else if (this.y < 0) {
-            this.y = FIELD_HEIGHT;
+            this.y = fieldHeight;
         }
         return this;
     }
@@ -109,3 +106,5 @@ class Person {
     }
 
 }
+
+export default Person;

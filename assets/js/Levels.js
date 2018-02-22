@@ -1,9 +1,12 @@
+import EnemyType1 from './settings/EnemyType1';
+import EnemyType2 from './settings/EnemyType2';
+
 class Levels {
 
     static getLevels() {
         return [
             {
-                winScoreLimit: 5,
+                winScoreLimit: 50,
                 imgSource: undefined,
                 enemies: [
                     new EnemyType1(),
@@ -11,14 +14,14 @@ class Levels {
                 ]
             },
             {
-                winScoreLimit: 10,
+                winScoreLimit: 60,
                 imgSource: undefined,
                 enemies: [
                     new EnemyType2()
                 ]
             },
             {
-                winScoreLimit: 15,
+                winScoreLimit: 70,
                 imgSource: undefined,
                 enemies: [
                     new EnemyType1(this.ctx, 20, 20, 'orange', 300, 800, -4),
@@ -27,3 +30,5 @@ class Levels {
         ];
     }
 }
+
+export default Levels;

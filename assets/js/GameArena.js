@@ -1,10 +1,20 @@
+import DAO from './Dao';
+import LocalStorageDao from './LocalStorageDao';
+import DrawService from './DrawService';
+import GameCache from './GameCache';
+import EnemyType1 from './settings/EnemyType1';
+import EnemyType2 from './settings/EnemyType2';
+import Person from './Person';
+import Levels from './Levels';
+import { resetStartButtonToInitialState } from './script';
+import GameArenaInstance from "./GameArenaInstance.js";
+
 class GameArena {
 
-    constructor(element, width, height, Person) {
+    constructor(element, fieldWidth, fieldHeight, Person) {
         this.fbDao = new DAO();
         this.lsDao = new LocalStorageDao();
         this.fbDao.init();
-
 
         this.gameCache = new GameCache();
 
@@ -23,13 +33,18 @@ class GameArena {
 
         this.enemies.push(new EnemyType1());
         this.enemies.push(new EnemyType1(this.ctx, 15, 15, 'blue', 300, 600, -3)); // just horiz moving
+        this.enemies.push(new EnemyType2(this.ctx, 32, 32, 'blue', 600, 600, 0, 'right'));
+        this.enemies.push(new EnemyType2(this.ctx, 32, 32, 'blue', 650, 650, 0, 'left'));
+        this.enemies.push(new EnemyType2(this.ctx, 16, 16, 'blue', 700, 700, 0, 'down'));
+        this.enemies.push(new EnemyType2(this.ctx, 16, 16, 'blue', 750, 750, 0, 'up'));
+
         /*this.enemies.push(new EnemyType1(this.ctx, 15, 15, 'blue', 500, 600, 3, -5)); // diagonal moving
         this.enemies.push(new EnemyType1(this.ctx, 15, 15, 'blue', 300, 100, 5, 3, 100)); // diagonal moving with radius
-        this.enemies.push(new EnemyType2());
+
         this.enemies.push(new EnemyType2(this.ctx, 5, 5, 'blue', 600, 600, 3));*/
 
-        this.canvas.width = FIELD_WIDTH;
-        this.canvas.height = FIELD_HEIGHT;
+        this.canvas.width = fieldWidth;
+        this.canvas.height = fieldHeight;
 
         this.img = new Image();  // Создание нового объекта изображения
         this.img.src = 'img/grass.png';
@@ -37,19 +52,24 @@ class GameArena {
         this.currLvl = 1;
         this.lvls =  Levels.getLevels();
 
-        //this.ctx.drawImage(this.img, 0, 0, this.canvas.width, this.canvas.height);
-
-
+        if(GameArenaInstance.getInReplay() === false && GameArenaInstance.getShowBackground()){
+            this.ctx.drawImage(this.img, 0, 0, this.canvas.width, this.canvas.height);
+        }
+        if(GameArenaInstance.getInReplay() && this.frames[this.stepId].imageSource !== undefined){
+            this.img = new Image();
+            this.img.src = this.frames[this.stepId].imageSource;
+            this.ctx.drawImage(this.img, 0, 0, this.canvas.width, this.canvas.height);
+        }
         this.updateState();
         //this.start();
     }
 
     start() {
         this.frameNo = 0;
-
+        this.person = new Person();
         this.interval = setInterval(this.updateState.bind(this), 50);
         window.addEventListener('keydown', (e) => {
-            e.preventDefault();
+            //e.preventDefault();
             this.keys = (this.keys || []);
             this.keys[e.keyCode] = (e.type == "keydown");
         });
@@ -64,7 +84,14 @@ class GameArena {
 
     clear() {
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        //this.ctx.drawImage(this.img, 0, 0, this.canvas.width, this.canvas.height);
+        if(GameArenaInstance.getInReplay() === false && GameArenaInstance.getShowBackground()){
+            this.ctx.drawImage(this.img, 0, 0, this.canvas.width, this.canvas.height);
+        }
+        if(GameArenaInstance.getInReplay() && this.frames[this.stepId].imageSource !== undefined){
+            this.img = new Image();
+            this.img.src = this.frames[this.stepId].imageSource;
+            this.ctx.drawImage(this.img, 0, 0, this.canvas.width, this.canvas.height);
+        }
     }
 
     updateState() {
@@ -84,22 +111,28 @@ class GameArena {
 
         this.checkCurrentLevelPassed();
 
-        this.person.newPos({
+        var gameInProgressAndRadiusesAllowed =  GameArenaInstance.getInReplay() === false && GameArenaInstance.getShowRadiuses();
+        var inReplayStateAndRadiusesAllowed =  GameArenaInstance.getInReplay() && this.frames[this.stepId].showRadiuses === true;
+        var showRadiuses = inReplayStateAndRadiusesAllowed || gameInProgressAndRadiusesAllowed;
+
+        var person = this.person.newPos({
             right: this.keys && this.keys[39],
             left: this.keys && this.keys[37],
             up: this.keys && this.keys[38],
             down: this.keys && this.keys[40],
-        }).update(this.ctx);
-        //this.fbDao.saveObject(this.person, this.stepId);
+        }, this.canvas.width, this.canvas.height).update(this.ctx);
         this.gameCache.saveHero(this.person, this.stepId);
-
-
         this.enemies.forEach((item) => {
-            item.newPos().update(this.ctx);
-            //this.fbDao.saveObject(item, this.stepId);
+            var personPosition = GameArenaInstance.getPersonPosition();
+
+            item.newPos(this.canvas.width, this.canvas.height).update(this.ctx, showRadiuses);
             this.gameCache.saveEnemy(item, this.stepId);
 
         });
+        if(GameArenaInstance.getShowBackground()) {
+            this.gameCache.saveBackGroundImage(this.img.src , this.stepId);
+        }
+        this.gameCache.savePersonRadiusesShowOption(this.stepId, GameArenaInstance.getShowRadiuses());
     }
 
     checkCurrentLevelPassed(){
@@ -157,27 +190,17 @@ class GameArena {
         this.stop();
 
         var playerName = prompt('Record saving', 'Unnamed player');
+
         if(playerName){
             this.fbDao.saveGame(this.gameCache.frames, this.score, playerName);
             this.lsDao.saveRecord(this.score, playerName);
         }
         resetStartButtonToInitialState();
         this.resetScore();
-        gameArena = new GameArena(this.canvas, FIELD_WIDTH, FIELD_HEIGHT, Person);
+        GameArenaInstance.setGameArenaInstance(new GameArena(this.canvas, this.canvas.width, this.canvas.height, Person));
+        this.clear();
 
-        /*bootbox.prompt({
-            title: "What is your name?",
-            value: "Unnamed champion",
-            callback: (playerName) => {
-                if (playerName) {
-                    this.fbDao.saveGame(this.gameCache.frames, this.score, playerName);
-                    this.lsDao.saveRecord(this.score, playerName);
-                }
-                resetStartButtonToInitialState();
-                this.resetScore();
-                gameArena = new GameArena(this.canvas, FIELD_WIDTH, FIELD_HEIGHT, Person);
-            }
-        });*/
+
     }
 
     replayLastGame() {
@@ -218,17 +241,22 @@ class GameArena {
         }
         this.clear();
         var hero = JSON.parse(frame.hero);
-        var person = new Person(this.ctx, hero.width, hero.height, hero.color, hero.x, hero.y, hero.imgWidth, hero.imgHeight, hero.moveDirection, hero.i);
+        var person = new Person(this.ctx, hero.width, hero.height, hero.color, hero.x, hero.y,
+            hero.imgWidth, hero.imgHeight, hero.moveDirection, hero.i);
         person.update(this.ctx);
+
+        var gameInProgressAndRadiusesAllowed =  GameArenaInstance.getInReplay() === false && GameArenaInstance.getShowRadiuses();
+        var inReplayStateAndRadiusesAllowed =  GameArenaInstance.getInReplay() && this.frames[this.stepId].showRadiuses === true;
+        var showRadiuses = inReplayStateAndRadiusesAllowed || gameInProgressAndRadiusesAllowed;
 
         frame.enemies.forEach((object) => {
             var item = JSON.parse(object);
             var enemy;
             if (item.visionRadius) {
-                enemy = new EnemyType1(this.ctx, item.width, item.height, item.color, item.x, item.y, item.speedV, item.speedH, item.visionRadius);
-                enemy.update(this.ctx);
+                enemy = new EnemyType1(this.ctx, item.width, item.height, item.color, item.x, item.y, item.speedV, item.speedH, item.visionRadius, item.i);
+                enemy.update(this.ctx, showRadiuses);
             } else {
-                enemy = new EnemyType2(this.ctx, item.width, item.height, item.color, item.x, item.y);
+                enemy = new EnemyType2(this.ctx, item.width, item.height, item.color, item.x, item.y, item.i);
                 enemy.update(this.ctx);
             }
         });
@@ -245,9 +273,12 @@ class GameArena {
             //console.log(element.child('content').key + ':' + element.child('content').val());
             this.clear();
             var hero = JSON.parse(element.child('content').val());
-            var person = new Person(this.ctx, hero.width, hero.height, hero.color, hero.x, hero.y, hero.imgWidth, hero.imgHeight, hero.moveDirection, hero.i);
+            var person = new Person(this.ctx, hero.width, hero.height, hero.color, hero.x, hero.y,
+                hero.imgWidth, hero.imgHeight, hero.moveDirection, hero.i);
             person.update(this.ctx);
             this.stepId++;
         });
     }
 }
+
+export default GameArena;
