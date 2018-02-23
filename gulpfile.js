@@ -26,8 +26,8 @@ gulp.task('jshint', function () {
 
 gulp.task('concat', function() {
     return gulp.src(['./assets/js/Person.js', './assets/js/EnemyType1.js', './assets/js/EnemyType2.js',
-        './assets/js/Dao.js', './assets/js/LocalStorageDao.js', './assets/js/DrawService.js', './assets/js/GameCache.js',
-        './assets/js/PersonImgSettings.js', './assets/js/Router.js', './assets/js/Levels.js',  './assets/js/GameArena.js',
+        './assets/js/FireBaseDao.js', './assets/js/LocalStorageDao.js', './assets/js/DrawService.js', './assets/js/GameCache.js',
+        './assets/js/PersonImgSettings.js', './assets/js/router.js', './assets/js/Levels.js',  './assets/js/GameArena.js',
         './assets/js/script.js', './assets/js/main.js'])
         .pipe(concat('all.js'))
         .pipe(gulp.dest('build'));
@@ -43,7 +43,7 @@ gulp.task('js-babel', function(){
         .bundle()
         .pipe(source('main.js')) //.pipe(source('all.js'))
         .pipe(buffer())
-        .pipe(uglify())
+        //.pipe(uglify())
         .pipe(rename({ suffix: '.min' }))
         .pipe(gulp.dest('build'))
 });
